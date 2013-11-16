@@ -1,0 +1,25 @@
+=form_for @property_grid_record do |f|
+  .property_grid
+    ul
+      - @property_grid.groups.each_with_index do |group, index|
+        li.expanded class="expandableGroup#{index}" = group.name
+        .property_group
+          div class="property_group#{index}"
+            table
+              tr
+                th Property
+                th Value
+              - group.properties.each do |prop|
+                tr
+                  td
+                    = prop.property_name
+                  td.last
+                    - # must be processed here so that ERB has the context (the 'self') of the HTML pre-processor.
+                    = render inline: ERB.new(prop.get_input_control).result(binding)
+
+  = javascript_tag @javascript
+
+  javascript:
+      $(".jq_dateTimePicker").datetimepicker({dateFormat: 'mm/dd/yy', timeFormat: 'hh:mm tt'});
+      $(".jq_timePicker").timepicker({timeFormat: "hh:mm tt"});
+      $(".jq_colorPicker").minicolors()
