@@ -27,8 +27,5 @@ class PropertyGridRecord < NonPersistedActiveRecord
     @prop_g = '#ff0000'
     @prop_h = 'Pears'
     @prop_i = 2
-
-
   end
-
 end

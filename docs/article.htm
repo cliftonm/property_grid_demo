@@ -13,7 +13,7 @@
 editor that can be initialized in a fluid programming style or with a minimal 
 DSL.</p>
 <h2>Get The Source From GitHub</h2>
-<p>git clone https://github.com/cliftonm/property_grid</p>
+<p>git clone https://github.com/cliftonm/property_grid_demo</p>
 <h2>Introduction</h2>
 <p>I needed a general purpose property grid editor that supported some fancy 
 things like date/time pickers, color pickers, etc., based on record fields known 
@@ -107,6 +107,96 @@ example:</p>
   GroupProperty.new(:prop_c, 'Date', :date) &lt;&lt; 
   GroupProperty.new(:prop_d, 'Time', :time) &lt;&lt;
   GroupProperty.new(:prop_e, &quot;Date/Time&quot;, :datetime)</pre>
+<h3>Class GroupProperty</h3>
+<p>This class is the container for the actual property:</p>
+<pre>include PropertyGridHelpers
+
+class GroupProperty
+  attr_accessor :property_var
+  attr_accessor :property_name
+  attr_accessor :property_type
+  attr_accessor :property_collection
+
+  # some of these use jquery: http://jqueryui.com/
+  def initialize(var, name, property_type, collection = nil)
+    @property_var = var
+    @property_name = name
+    @property_type = property_type
+    @property_collection = collection
+  end
+
+  def get_input_control
+    form_type = get_property_type_map[@property_type]
+    raise &quot;Property '#{@property_type}' is not mapped to an input control&quot; if form_type.nil?
+    erb = get_erb(form_type)
+
+    erb
+  end
+end</pre>
+<p>I will discuss what <code>get_erb</code> does later.</p>
+<p>Note that three fields are required:</p>
+<ol>
+	<li>The symbolic name of the model's property</li>
+	<li>The display text of the property</li>
+	<li>The property type</li>
+</ol>
+<p>Optionally, a collection can be passed in, which supports dropdown controls.&nbsp; 
+The collection can either be a simple array:</p>
+<pre>['Apples', 'Oranges', 'Pears']</pre>
+<p>or a &quot;record&quot;, implementing <code>id</code> and <code>name</code> 
+attributes, for example:</p>
+<pre># A demo of using id and name in a combo box
+class ARecord
+  attr_accessor :id
+  attr_accessor :name
+
+  def initialize(id, name)
+    @id = id;
+    @name = name
+  end
+end
+
+@records =
+[
+  ARecord.new(1, 'California'),
+  ARecord.new(2, 'New York'),
+  ARecord.new(3, 'Rhode Island'),
+]</pre>
+<p>which is suitable for collections of ActiveRecord objects.</p>
+<h3>Class ControlType</h3>
+<p>This class is a container for the information necessary to render a web 
+control:</p>
+<pre>class ControlType
+  attr_accessor :type_name
+  attr_accessor :class_name
+
+  def initialize(type_name, class_name = nil)
+    @type_name = type_name
+    @class_name = class_name
+  end
+end</pre>
+<p>This is very basic - it's just the type name and an optional class name.&nbsp; 
+At the moment, the class name is used just for jQuery controls.</p>
+<h2>Defining Property Types</h2>
+<p>Property types are defined in property_grid_helpers.rb - this is a simply 
+function that returns an array of hashes of <code>type =&gt; ControlType</code>.</p>
+<pre>def get_property_type_map
+  {
+    string: ControlType.new('text_field'),
+    text: ControlType.new('text_area'),
+    boolean: ControlType.new('check_box'),
+    password: ControlType.new('password_field'),
+    date: ControlType.new('datepicker'),
+    datetime: ControlType.new('text_field', 'jq_dateTimePicker'),
+    time: ControlType.new('text_field', 'jq_timePicker'),
+    color: ControlType.new('text_field', 'jq_colorPicker'),
+    list: ControlType.new('select'),
+    db_list: ControlType.new('select')
+  }
+end
+</pre>
+<p>It is here that you would extend or change the specification for how types 
+map to web queries.&nbsp; Obviously you're not limited to using jQuery controls.</p>
 <h2>What Would a DSL Implementation Look Like?</h2>
 <p>Fair enough, if I'm going to complain about misplaced DSL's, let's see what 
 it would look like if I wrote the property grid container objects as a DSL.&nbsp; 
@@ -169,7 +259,7 @@ end</pre>
 maintains the current instance being applied in the DSL script.&nbsp; We don't 
 use a singleton pattern because we want to allow for multiple instances of 
 property grids on the same web page.</p>
-<h3>Good DSL, Bad DSL</h3>
+<h3>Good DSL, Bad DSL - a Digression</h3>
 <p>The advantages are fairly obvious - the resulting script to generate the 
 property grid is compact and readable.&nbsp; The above DSL is simple - it's effectively nothing more than helper methods 
 that wrap the details of working with the underlying classes.&nbsp; 
@@ -198,24 +288,22 @@ group_property 'Text', :prop_a</pre>
 noisier than the DSL!</p>
 <p>The major pitfall of working with a DSL is, in my experience, three-fold:</p>
 <ol>
-	<li>The underlying implementation is poorly architected, doesn't follow good 
+	<li>The underlying implementation may be poorly architected, doesn't follow good 
 	OOP practices, and potentially isn't even object oriented.&nbsp; The result 
 	is a morass of spaghetti code which the DSL nicely (perhaps) hides but is a 
 	maintenance nightmare.</li>
 	<li>DSL's that utilize &quot;wildcard&quot; parameter lists and rely heavily on hashes 
 	of symbol-value pairs, arrays of hashes, hashes of symbol-arrays, etc., are 
 	almost impossible to reverse engineer as to all the different permutations 
-	of parameters and allowable symbols.&nbsp; And I guarantee you that the 
-	documentation (if it exists) will not be up-to-date, and you really don't 
-	want to read through hundreds of unit tests to glean the workings.</li>
+	of parameters and allowable symbols.</li>
 	<li>Classes are extensible.&nbsp; If I want to add some new behaviors, I can 
 	derive a custom class.&nbsp; If I don't have access to the underlying 
-	classes, this because impossible (in Ruby, this is the bad practice of 
-	&quot;monkey-patching&quot; resulting from poorly designed implementations, which 
-	quite frankly is a consequence of the fact that Ruby, in not supporting 
-	interfaces, implicitly promotes the use of concrete classes rather than 
-	design patterns based on abstractions -- keep this in mind if you want to do 
-	large scale development in Ruby.)</li>
+	classes, this becomes impossible unless the code is money-patched.&nbsp; This is 
+	a terribly bad practice resulting from poorly designed implementations, 
+	which quite frankly I consider to be a consequence of the fact that Ruby, in 
+	not supporting interfaces, implicitly promotes the use of concrete classes 
+	rather than design patterns based on abstractions -- keep this in mind if 
+	you want to do large scale development in Ruby.</li>
 </ol>
 <p>So, to put it positively, DSL's are great if:</p>
 <ol>

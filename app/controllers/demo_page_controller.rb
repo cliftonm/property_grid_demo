@@ -10,7 +10,12 @@ class DemoPageController < ApplicationController
 
   def initialize_attributes
     @property_grid_record = PropertyGridRecord.new
-    @property_grid = new_property_grid
+    @property_grid = define_property_grid
+    @javascript = generate_javascript_for_property_groups(@property_grid)
+  end
+
+  def define_property_grid
+    grid = new_property_grid
     group 'Text Input'
     group_property 'Text', :prop_a
     group_property 'Password', :prop_b, :password
@@ -26,11 +31,6 @@ class DemoPageController < ApplicationController
     group_property 'Basic List', :prop_h, :list, ['Apples', 'Oranges', 'Pears']
     group_property 'ID - Name List', :prop_i, :db_list, @property_grid_record.records
 
-    @javascript = ''
-
-    @property_grid.groups.each_with_index do |grp, index|
-      @javascript << get_javascript_for_group(index)
-    end
-
+    grid
   end
 end

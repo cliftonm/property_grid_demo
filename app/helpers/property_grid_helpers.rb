@@ -39,4 +39,27 @@ module PropertyGridHelpers
 
     js
   end
+
+  def generate_javascript_for_property_groups(grid)
+    javascript = ''
+
+    grid.groups.each_with_index do |grp, index|
+      javascript << get_javascript_for_group(index)
+    end
+
+    javascript
+  end
+
+  # Returns the erb for a given form type.  This code handles the construction of the web control that will display
+  # the content of a property in the property grid.
+  # The web page must utilize a field_for ... |f| for this construction to work.
+  def get_erb(form_type)
+    erb = "<%= f.#{form_type.type_name} :#{@property_var}"
+    erb << ", class: '#{form_type.class_name}'" if form_type.class_name.present?
+    erb << ", #{@property_collection}" if @property_collection.present? && @property_type == :list
+    erb << ", options_from_collection_for_select(f.object.records, :id, :name, f.object.#{@property_var})" if @property_collection.present? && @property_type == :db_list
+    erb << "%>"
+
+    erb
+  end
 end
