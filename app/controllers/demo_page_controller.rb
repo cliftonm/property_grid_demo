@@ -1,5 +1,4 @@
-include PropertyGridDsl
-include PropertyGridHelpers
+include PropertyGrid
 
 class DemoPageController < ApplicationController
   def index

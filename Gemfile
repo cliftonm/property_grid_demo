@@ -7,6 +7,8 @@ gem 'rails', '3.2.15'
 
 gem 'sqlite3'
 
+gem 'property_grid'
+
 gem 'slim'
 gem 'thin'
 gem 'sass'
